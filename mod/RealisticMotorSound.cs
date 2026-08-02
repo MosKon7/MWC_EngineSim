@@ -13,7 +13,7 @@ namespace RealisticMotorSound
         public override string ID => "RealisticMotorSound";
         public override string Name => "RealisticMotorSound";
         public override string Author => "Moss";
-        public override string Version => "1.4.2";
+        public override string Version => "1.5.0";
         public override string Description => "Live Engine Sim motor audio for My Winter Car";
         public override Game SupportedGames => Game.MyWinterCar;
 

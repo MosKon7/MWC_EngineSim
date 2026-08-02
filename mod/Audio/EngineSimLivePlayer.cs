@@ -49,8 +49,6 @@ namespace RealisticMotorSound.Audio
         private float _convolution = 0.75f;
         private float _bassCutHz = 120f;
         private float _tickEma;
-        private float _throttleSmoothed;
-        private float _gainSmoothed = 1f;
 
         public bool IsReady
         {
@@ -135,16 +133,15 @@ namespace RealisticMotorSound.Audio
         }
 
         /// <summary>
-        /// Returns pedal throttle smoothed for native targets
+        /// Returns pedal throttle for native targets
         /// </summary>
-        private float SmoothedThrottle01()
+        private float TargetThrottle01()
         {
             float target = Mathf.Clamp01(_throttle01);
-            // Match native idle floor so C# gain and sim plate move together
-            if (_engineOn && target < 0.28f)
-                target = 0.28f;
-            _throttleSmoothed += (target - _throttleSmoothed) * 0.15f;
-            return _throttleSmoothed;
+            // Small idle floor so closed pedal still combusts under dyno hold
+            if (_engineOn && target < 0.2f)
+                target = 0.2f;
+            return target;
         }
 
         /// <summary>
@@ -173,12 +170,6 @@ namespace RealisticMotorSound.Audio
             _hfGain = Mathf.Clamp(settings.HfGain, 0f, 0.05f);
             _convolution = Mathf.Clamp01(settings.Convolution);
             float bass = Mathf.Clamp(settings.BassCutHz, 0f, 800f);
-            // Hard bass cut buries idle; ease it down under 1400 RPM
-            if (_rpm > 1f && _rpm < 1400f && bass > 90f)
-            {
-                float t = Mathf.InverseLerp(700f, 1400f, _rpm);
-                bass = Mathf.Lerp(90f, bass, Mathf.Clamp01(t));
-            }
             _bassCutHz = bass;
 
             EngineSimNative.esm_set_mix(
@@ -306,7 +297,7 @@ namespace RealisticMotorSound.Audio
                     do
                     {
                         float rpm = _rpm;
-                        float thr = SmoothedThrottle01();
+                        float thr = TargetThrottle01();
                         int ign = (_engineOn && rpm >= 350f) ? 1 : 0;
                         EngineSimNative.esm_set_targets(_handle, rpm, thr, ign);
                         EngineSimNative.esm_tick(_handle, TickDt);
@@ -382,19 +373,8 @@ namespace RealisticMotorSound.Audio
             if (!_started || data == null || data.Length == 0)
                 return;
 
-            float targetGain = _volume * 0.5f;
-            float thr = Mathf.Clamp01(_throttleSmoothed);
-            targetGain *= Mathf.Lerp(1.05f, 1.35f, thr);
-
-            // Stronger audible idle band (700-1200), fades out by 1500
-            if (_rpm > 500f && _rpm < 1500f)
-            {
-                float peak = 1f - Mathf.Abs(_rpm - 950f) / 450f;
-                targetGain *= Mathf.Lerp(1f, 1.9f, Mathf.Clamp01(peak));
-            }
-
-            _gainSmoothed += (targetGain - _gainSmoothed) * 0.12f;
-            float gain = _gainSmoothed;
+            // Flat gain like the simulator UI: no idle/load make-up, no slew
+            float gain = _volume * 0.55f;
 
             int ch = Mathf.Max(1, channels);
             int frames = data.Length / ch;

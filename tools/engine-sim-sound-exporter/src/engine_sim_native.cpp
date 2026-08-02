@@ -198,7 +198,6 @@ struct EsmHandle {
     // One-pole high-pass (x - LPF) for realtime bass cut
     float highpassHz = 80.0f;
     float hpLp = 0.0f;
-    float smoothedThrottle = 0.28f;
 };
 
 static void applyTargetsLocked(EsmHandle *handle) {
@@ -211,20 +210,15 @@ static void applyTargetsLocked(EsmHandle *handle) {
         handle->simulator->m_starterMotor.m_enabled = false;
         handle->simulator->m_dyno.m_enabled = false;
         handle->simulator->m_dyno.m_hold = false;
-        handle->smoothedThrottle = 0.28f;
         handle->engine->setSpeedControl(0.0);
         return;
     }
 
-    // Soft idle floor + smoothed speedControl avoid coast↔throttle jumps
-    float targetSc = throttle;
-    if (targetSc < 0.28f) {
-        targetSc = 0.28f;
+    // Instant speedControl (no slew). Small idle floor only.
+    if (throttle < 0.2f) {
+        throttle = 0.2f;
     }
-
-    handle->smoothedThrottle +=
-        (targetSc - handle->smoothedThrottle) * 0.12f;
-    handle->engine->setSpeedControl(handle->smoothedThrottle);
+    handle->engine->setSpeedControl(throttle);
 
     handle->simulator->m_starterMotor.m_enabled = false;
     handle->simulator->m_dyno.m_enabled = true;
@@ -329,9 +323,9 @@ ESM_API EsmHandle *esm_create(const char *scriptPath) {
         audioParams.dF_F_mix = std::min(
             0.002f, static_cast<float>(handle->engine->getInitialHighFrequencyGain()));
         audioParams.convolution = 0.75f;
-        // Tight leveler: wide min/max inverts loudness (WOT ducked, coast boosted)
-        audioParams.levelerMaxGain = 1.05f;
-        audioParams.levelerMinGain = 0.85f;
+        // Same leveling role as desktop Engine Sim: steady loudness across RPM/load
+        audioParams.levelerMaxGain = 1.9f;
+        audioParams.levelerMinGain = 0.00001f;
         handle->simulator->synthesizer().setAudioParameters(audioParams);
 
         initializeImpulseResponses(handle->simulator, handle->engine);
@@ -518,8 +512,8 @@ ESM_API void esm_set_mix(
     p.inputSampleNoise = std::clamp(jitter, 0.0f, 1.0f);
     p.dF_F_mix = std::clamp(hfGain, 0.0f, 0.05f);
     p.convolution = std::clamp(convolution, 0.0f, 1.0f);
-    p.levelerMaxGain = 1.05f;
-    p.levelerMinGain = 0.85f;
+    p.levelerMaxGain = 1.9f;
+    p.levelerMinGain = 0.00001f;
     handle->simulator->synthesizer().setAudioParameters(p);
 }
 

@@ -1,0 +1,5 @@
+if(EXISTS "Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/engine-sim-test[1]_tests.cmake")
+  include("Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/engine-sim-test[1]_tests.cmake")
+else()
+  add_test(engine-sim-test_NOT_BUILT engine-sim-test_NOT_BUILT)
+endif()

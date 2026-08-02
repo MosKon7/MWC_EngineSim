@@ -1,0 +1,46 @@
+# Build / IDE
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.obj
+*.log
+error_log.log
+
+# Native build trees
+tools/engine-sim-sound-exporter/build*/
+tools/engine-sim-sound-exporter/out/
+tools/vcpkg/
+engine-sim-v0.1.14a/
+
+# Heavy / vendored deps (clone/build separately)
+tools/engine-sim-sound-exporter/dependencies/submodules/
+tools/engine-sim-sound-exporter/dependencies/discord/
+tools/engine-sim-sound-exporter/dependencies/submodules/**
+
+# Compiled binaries (deployed from CI/local build)
+*.dll
+*.exe
+*.so
+*.dylib
+!mod/**/*.dll
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Secrets
+.env
+.env.*
+
+# Nested tool caches
+tools/win_flex_bison/*.zip
+tools/win_flex_bison/win_bison.exe
+tools/win_flex_bison/win_flex.exe
+

@@ -1,0 +1,5 @@
+if(EXISTS "Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/dependencies/submodules/simple-2d-constraint-solver/simple-2d-constraint-solver-test[1]_tests.cmake")
+  include("Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/dependencies/submodules/simple-2d-constraint-solver/simple-2d-constraint-solver-test[1]_tests.cmake")
+else()
+  add_test(simple-2d-constraint-solver-test_NOT_BUILT simple-2d-constraint-solver-test_NOT_BUILT)
+endif()

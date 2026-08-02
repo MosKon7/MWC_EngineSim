@@ -1,0 +1,320 @@
+import "engine_sim.mr"
+
+units units()
+constants constants()
+impulse_response_library ir_lib()
+label cycle(2 * 360 * units.deg)
+
+private node wires {
+    output wire1: ignition_wire();
+    output wire2: ignition_wire();
+    output wire3: ignition_wire();
+    output wire4: ignition_wire();
+}
+
+private node talbot_ohv_head {
+    input intake_camshaft;
+    input exhaust_camshaft;
+    input chamber_volume: 45.0 * units.cc;
+    input intake_runner_volume: 180.0 * units.cc;
+    input intake_runner_cross_section_area: 1.2 * units.inch * 1.2 * units.inch;
+    input exhaust_runner_volume: 55.0 * units.cc;
+    input exhaust_runner_cross_section_area: 1.1 * units.inch * 1.1 * units.inch;
+
+    input flow_attenuation: 1.0;
+    input lift_scale: 1.0;
+    input flip_display: false;
+    alias output __out: head;
+
+    function intake_flow(50 * units.thou)
+    intake_flow
+        .add_flow_sample(0 * lift_scale, 0 * flow_attenuation)
+        .add_flow_sample(50 * lift_scale, 45 * flow_attenuation)
+        .add_flow_sample(100 * lift_scale, 75 * flow_attenuation)
+        .add_flow_sample(150 * lift_scale, 110 * flow_attenuation)
+        .add_flow_sample(200 * lift_scale, 140 * flow_attenuation)
+        .add_flow_sample(250 * lift_scale, 160 * flow_attenuation)
+        .add_flow_sample(300 * lift_scale, 175 * flow_attenuation)
+        .add_flow_sample(350 * lift_scale, 185 * flow_attenuation)
+        .add_flow_sample(400 * lift_scale, 190 * flow_attenuation)
+
+    function exhaust_flow(50 * units.thou)
+    exhaust_flow
+        .add_flow_sample(0 * lift_scale, 0 * flow_attenuation)
+        .add_flow_sample(50 * lift_scale, 40 * flow_attenuation)
+        .add_flow_sample(100 * lift_scale, 70 * flow_attenuation)
+        .add_flow_sample(150 * lift_scale, 95 * flow_attenuation)
+        .add_flow_sample(200 * lift_scale, 115 * flow_attenuation)
+        .add_flow_sample(250 * lift_scale, 130 * flow_attenuation)
+        .add_flow_sample(300 * lift_scale, 140 * flow_attenuation)
+        .add_flow_sample(350 * lift_scale, 145 * flow_attenuation)
+        .add_flow_sample(400 * lift_scale, 145 * flow_attenuation)
+
+    generic_cylinder_head head(
+        chamber_volume: chamber_volume,
+        intake_runner_volume: intake_runner_volume,
+        intake_runner_cross_section_area: intake_runner_cross_section_area,
+        exhaust_runner_volume: exhaust_runner_volume,
+        exhaust_runner_cross_section_area: exhaust_runner_cross_section_area,
+
+        intake_port_flow: intake_flow,
+        exhaust_port_flow: exhaust_flow,
+        valvetrain: standard_valvetrain(
+            intake_camshaft: intake_camshaft,
+            exhaust_camshaft: exhaust_camshaft
+        ),
+        flip_display: flip_display
+    )
+}
+
+private node talbot_ohv_camshaft {
+    input lobe_profile;
+    input lobe_separation: 112 * units.deg;
+    input intake_lobe_center: lobe_separation;
+    input exhaust_lobe_center: lobe_separation;
+    input advance: 0 * units.deg;
+    input base_radius: 0.8 * units.inch;
+
+    output intake_cam: _intake_cam;
+    output exhaust_cam: _exhaust_cam;
+
+    camshaft_parameters params(
+        advance: advance,
+        base_radius: base_radius
+    )
+
+    camshaft _intake_cam(params, lobe_profile: lobe_profile)
+    camshaft _exhaust_cam(params, lobe_profile: lobe_profile)
+
+    label rot360(360 * units.deg)
+
+    // Firing order 1-3-4-2
+    _intake_cam
+        .add_lobe(rot360 - intake_lobe_center - (0.0 / 4) * cycle)
+        .add_lobe(rot360 - intake_lobe_center - (3.0 / 4) * cycle)
+        .add_lobe(rot360 - intake_lobe_center - (1.0 / 4) * cycle)
+        .add_lobe(rot360 - intake_lobe_center - (2.0 / 4) * cycle)
+
+    _exhaust_cam
+        .add_lobe(rot360 + exhaust_lobe_center - (0.0 / 4) * cycle)
+        .add_lobe(rot360 + exhaust_lobe_center - (3.0 / 4) * cycle)
+        .add_lobe(rot360 + exhaust_lobe_center - (1.0 / 4) * cycle)
+        .add_lobe(rot360 + exhaust_lobe_center - (2.0 / 4) * cycle)
+}
+
+public node talbot_1510_i4 {
+    alias output __out: engine;
+
+    engine engine(
+        name: "Talbot 1510 (Simca 1307) 1.6L OHV I4",
+        starter_torque: 60 * units.lb_ft,
+        starter_speed: -400 * units.rpm,
+        redline: 6000 * units.rpm,
+        fuel: fuel(
+            max_turbulence_effect: 2.0,
+            max_burning_efficiency: 0.72
+        ),
+        throttle_gamma: 1.8,
+        hf_gain: 0.0015,
+        noise: 0.3,
+        jitter: 0.2,
+        simulation_frequency: 18000
+    )
+
+    wires wires()
+
+    label stroke(79.2 * units.mm)
+    label bore(80.0 * units.mm)
+    label rod_length(5.2 * units.inch)
+    label compression_height(1.1 * units.inch)
+
+    crankshaft c0(
+        throw: stroke / 2,
+        flywheel_mass: 12 * units.lb,
+        mass: 32 * units.lb,
+        friction_torque: 1.2 * units.lb_ft,
+        moment_of_inertia: 0.2 * 0.5,
+        position_x: 0.0,
+        position_y: 0.0,
+        tdc: 90 * units.deg
+    )
+
+    rod_journal rj0(angle: 0.0 * units.deg)
+    rod_journal rj1(angle: 180.0 * units.deg)
+    rod_journal rj2(angle: 180.0 * units.deg)
+    rod_journal rj3(angle: 0.0 * units.deg)
+    c0
+        .add_rod_journal(rj0)
+        .add_rod_journal(rj1)
+        .add_rod_journal(rj2)
+        .add_rod_journal(rj3)
+
+    piston_parameters piston_params(
+        mass: 350 * units.g,
+        compression_height: compression_height,
+        wrist_pin_position: 0.0,
+        displacement: 0.0
+    )
+
+    connecting_rod_parameters cr_params(
+        mass: 450 * units.g,
+        moment_of_inertia: 0.0018,
+        center_of_mass: 0.0,
+        length: rod_length
+    )
+
+    intake intake(
+        plenum_volume: 1.5 * units.L,
+        plenum_cross_section_area: 18.0 * units.cm2,
+        intake_flow_rate: k_carb(700.0),
+        runner_flow_rate: k_carb(200.0),
+        runner_length: 6.5 * units.inch,
+        idle_flow_rate: k_carb(0.0),
+        idle_throttle_plate_position: 0.999,
+        velocity_decay: 0.6
+    )
+
+    exhaust_system_parameters es_params(
+        outlet_flow_rate: k_carb(900.0),
+        primary_tube_length: 12.0 * units.inch,
+        primary_flow_rate: k_carb(180.0),
+        velocity_decay: 1.1,
+        volume: 110.0 * units.L
+    )
+
+    exhaust_system exhaust0(
+        es_params,
+        audio_volume: 7 * 0.8,
+        impulse_response: ir_lib.mild_exhaust_0
+    )
+
+    exhaust_system exhaust1(
+        es_params,
+        audio_volume: 7 * 1.0,
+        impulse_response: ir_lib.mild_exhaust_0
+    )
+
+    cylinder_bank_parameters bank_params(
+        bore: bore,
+        deck_height: stroke / 2 + rod_length + compression_height
+    )
+
+    cylinder_bank b0(bank_params, angle: 0.0 * units.deg)
+    b0
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.0015)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj0,
+            intake: intake,
+            exhaust_system: exhaust0,
+            ignition_wire: wires.wire1,
+            sound_attenuation: 0.9
+        )
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.002)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj1,
+            intake: intake,
+            exhaust_system: exhaust1,
+            ignition_wire: wires.wire2,
+            sound_attenuation: 1.1
+        )
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.0015)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj2,
+            intake: intake,
+            exhaust_system: exhaust0,
+            ignition_wire: wires.wire3,
+            sound_attenuation: 0.8
+        )
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.002)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj3,
+            intake: intake,
+            exhaust_system: exhaust1,
+            ignition_wire: wires.wire4,
+            sound_attenuation: 0.9
+        )
+
+    engine
+        .add_cylinder_bank(b0)
+
+    engine.add_crankshaft(c0)
+
+    // Для OHV двигателя используем один профиль кулачка для всех клапанов
+    harmonic_cam_lobe cam_lobe(
+        duration_at_50_thou: 190 * units.deg,
+        gamma: 1.2,
+        lift: 7.0 * units.mm,
+        steps: 80
+    )
+
+    talbot_ohv_camshaft camshaft(
+        lobe_profile: cam_lobe,
+        intake_lobe_center: 112 * units.deg,
+        exhaust_lobe_center: 112 * units.deg,
+        base_radius: 400 * units.thou
+    )
+
+    b0.set_cylinder_head(
+        talbot_ohv_head(
+            intake_camshaft: camshaft.intake_cam,
+            exhaust_camshaft: camshaft.exhaust_cam
+        )
+    )
+
+    function timing_curve(1000 * units.rpm)
+    timing_curve
+        .add_sample(0000 * units.rpm, -10 * units.deg)
+        .add_sample(1000 * units.rpm, -12 * units.deg)
+        .add_sample(2000 * units.rpm, -18 * units.deg)
+        .add_sample(3000 * units.rpm, -24 * units.deg)
+        .add_sample(4000 * units.rpm, -28 * units.deg)
+        .add_sample(5000 * units.rpm, -30 * units.deg)
+
+    ignition_module ignition_module(
+        timing_curve: timing_curve,
+        rev_limit: 6500 * units.rpm,
+        limiter_duration: 0.06)
+    ignition_module
+        .connect_wire(wires.wire1, (0.0 / 4.0) * cycle)  // цилиндр 1
+        .connect_wire(wires.wire3, (3.0 / 4.0) * cycle)  // цилиндр 3
+        .connect_wire(wires.wire4, (2.0 / 4.0) * cycle)  // цилиндр 2
+        .connect_wire(wires.wire2, (1.0 / 4.0) * cycle)  // цилиндр 4
+
+    engine.add_ignition_module(ignition_module)
+}
+
+private node talbot_1510_vehicle {
+    alias output __out:
+        vehicle(
+            mass: 2200 * units.lb,
+            drag_coefficient: 0.35,
+            cross_sectional_area: (65 * units.inch) * (55 * units.inch),
+            diff_ratio: 3.9,
+            tire_radius: 12 * units.inch,
+            rolling_resistance: 280 * units.N
+        );
+}
+
+private node talbot_1510_transmission {
+    alias output __out:
+        transmission(
+            max_clutch_torque: 180 * units.lb_ft
+        )
+        .add_gear(3.55)  // 1-я передача
+        .add_gear(2.16)  // 2-я передача
+        .add_gear(1.40)  // 3-я передача
+        .add_gear(1.03)  // 4-я передача
+        .add_gear(0.82); // 5-я передача
+}
+
+public node main {
+    set_engine(talbot_1510_i4())
+    set_vehicle(talbot_1510_vehicle())
+    set_transmission(talbot_1510_transmission())
+}
+
+main()

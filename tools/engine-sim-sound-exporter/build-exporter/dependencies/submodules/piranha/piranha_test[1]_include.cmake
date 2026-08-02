@@ -1,0 +1,5 @@
+if(EXISTS "Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/dependencies/submodules/piranha/piranha_test[1]_tests.cmake")
+  include("Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/dependencies/submodules/piranha/piranha_test[1]_tests.cmake")
+else()
+  add_test(piranha_test_NOT_BUILT piranha_test_NOT_BUILT)
+endif()

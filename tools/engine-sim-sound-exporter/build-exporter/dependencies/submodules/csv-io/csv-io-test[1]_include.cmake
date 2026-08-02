@@ -1,0 +1,5 @@
+if(EXISTS "Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/dependencies/submodules/csv-io/csv-io-test[1]_tests.cmake")
+  include("Q:/project/RealisticMotorSound/tools/engine-sim-sound-exporter/build-exporter/dependencies/submodules/csv-io/csv-io-test[1]_tests.cmake")
+else()
+  add_test(csv-io-test_NOT_BUILT csv-io-test_NOT_BUILT)
+endif()
